@@ -12,13 +12,16 @@ type List interface {
 	Get(index int) interface{}
 	Add(value interface{})
 	Remove(index int)
+	Insert(int, interface{})
 	Size() int
 }
 type listImpl struct {
 	size    uint32
-	level   uint32
+	level   uint32 // 当前 tire树的大小 位数，每一层添加 5 位. eg: 31 < 2^5 -> level = 5; 63 < 2^ 6 -> level = 6
 	root    *trieNode
 	tail    *trieNode
+	cap     int32 // 容量
+	origin  int32 // 当前list偏移量（list可能是其他数组拆分的）
 	ownerID int64
 }
 
@@ -77,6 +80,31 @@ func (l *listImpl) Set(index int, value interface{}) {
 	}
 	// todo,detect whether generate new node
 }
+func (l *listImpl) Insert(index int, value interface{}) {
+
+}
+func (l *listImpl) slice(start, end int) *listImpl {
+	if start == 0 && end == l.Size()-1 {
+		return l
+	}
+	return l.setListBounds()
+}
+func (l *listImpl) setListBounds(start, end int) *listImpl {
+	ownwer := listImpl.ownerID
+	oldOrigin := listImpl.origin
+	oldCap := listImpl.cap
+	newOrgin := oldOrigin + begin
+	newCap := oldOrigin + end
+	if end < 0 {
+		newCap = oldCap + end
+	}
+	if newOrgin == oldOrigin && newCap == oldCap {
+		return l;
+	}
+	if newOrgin >= newCap {
+		return emptyList();
+	}
+}
 func (l *listImpl) Add(value interface{}) {}
 
 func (l *listImpl) Remove(index int) {}
@@ -94,7 +122,8 @@ func (l *listImpl) lookUp(index uint32) interface{} {
 		fmt.Errorf("node or node.arr empty for index: %v", index)
 		return nil
 	}
-	return node.arr[index]
+	// 最低五位表示当前节点偏移值
+	return node.arr[index&BIT_MASK]
 }
 
 func (l *listImpl) getNode(index uint32) *trieNode {
